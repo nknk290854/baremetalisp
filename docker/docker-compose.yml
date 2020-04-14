@@ -3,7 +3,7 @@ services:
   baremetalisp:
     build: .
     volumes:
-      - "../:/hostdir"
+      - "../../:/hostdir"
     stdin_open: true
     tty: true
     working_dir: "/hostdir"
