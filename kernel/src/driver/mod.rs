@@ -1,17 +1,10 @@
 pub mod uart;
-pub mod memory;
-pub mod mbox;
-pub mod rand;
 pub mod delays;
-pub mod power;
-pub mod graphics;
 
 const UART_CLOCK: u64 = 48000000;
 const UART_BAUD:  u64 = 115200;
 
 pub struct Context {
-    pub graphics0: Option<graphics::Display>,
-    pub memory: usize
 }
 
 /// Initlize UART0 for serial console with 115200 8n1,
@@ -22,13 +15,12 @@ pub fn init() -> Context {
     //rand::init();
     //uart::puts("initialized rand\n");
 
-    let g = graphics::init();
-    let m = mbox::get_memory();
+//    let g = graphics::init();
+//    let m = mbox::get_memory();
 
     init_exceptions();
 
-    Context{graphics0: g,
-            memory: m}
+    Context{}
 }
 
 fn init_exceptions() {

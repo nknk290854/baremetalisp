@@ -1,9 +1,8 @@
 use core::intrinsics::volatile_load;
 
-use super::memory::*;
-
-const SYSTMR_LO: *mut u32 = (MMIO_BASE + 0x00003004) as *mut u32;
-const SYSTMR_HI: *mut u32 = (MMIO_BASE + 0x00003008) as *mut u32;
+pub const HIGH_SPEED_TIMER_BASE: u32 = 0x01C60000;
+const SYSTMR_LO: *mut u32 = (HIGH_SPEED_TIMER_BASE + 0x1c) as *mut u32;
+const SYSTMR_HI: *mut u32 = (HIGH_SPEED_TIMER_BASE + 0x20) as *mut u32;
 
 /// Wait N CPU cycles (ARM CPU only)
 pub fn wait_cycles(n: u32) {
