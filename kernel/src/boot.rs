@@ -1,5 +1,5 @@
 use super::driver;
-//use super::aarch64;
+use super::aarch64;
 
 pub fn run() {
     print_el();
@@ -10,11 +10,11 @@ pub fn run() {
 /// print current execution level
 fn print_el() {
     driver::uart::puts("[Current EL  ] EL");
-//    let el = aarch64::el::get_current_el();
-//    driver::uart::decimal(el as u64);
+    let el = aarch64::el::get_current_el();
+    driver::uart::decimal(el as u64);
     driver::uart::puts("\n");
 
-/*    driver::uart::puts("[MMU         ] ");
+    driver::uart::puts("[MMU         ] ");
     match aarch64::mmu::enabled() {
         Some(m) => {
             if m {
@@ -27,7 +27,7 @@ fn print_el() {
             driver::uart::puts("failed to access the system control register\n");
         }
     }
-*/
+
 }
 
 fn print_fortune() {
