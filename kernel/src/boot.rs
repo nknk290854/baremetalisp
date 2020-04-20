@@ -2,6 +2,7 @@ use super::driver;
 use super::aarch64;
 
 pub fn run() {
+    
     print_el();
     print_fortune();
     print_splash();

@@ -23,6 +23,15 @@ extern crate alloc;
 
 use core::panic::PanicInfo;
 
+extern {
+    fn get_device_start() -> u64;
+    fn get_device_end() -> u64;
+}
+
+extern {
+   fn mmu_init();
+}
+
 #[no_mangle]
 fn func() {
     ()
@@ -31,20 +40,31 @@ fn func() {
 #[no_mangle]
 pub fn entry() -> ! {
     let ctx = driver::init();
+    driver::uart::puts("call c function\n");
+    let device_start;
+    let device_end;
+    unsafe{ device_start = get_device_start();}
+    unsafe{ device_end   = get_device_end();}
+    driver::uart::puts("result = ");
+    driver::uart::hex(device_start);
+    driver::uart::puts(" , ");
+    driver::uart::hex(device_end);
+    driver::uart::puts("\n");
+    
 //    aarch64::mmu::init();
-
+    unsafe{mmu_init();};
     boot::run();
 
-//    match aarch64::el::get_current_el() {
-//        3 => { el3::el3_to_el1(); }
-//        2 => {
-//            driver::uart::puts("Warning: execution level is not EL3\n");
-//            el2::el2_to_el1();
-//        }
-//        _ => {
-//            driver::uart::puts("Error: execution level is not EL3\n");
-//        }
-//    }
+    match aarch64::el::get_current_el() {
+        3 => { el3::el3_to_el1(); }
+	2 => {
+            driver::uart::puts("Warning: execution level is not EL3\n");
+            el2::el2_to_el1();
+        }
+        _ => {
+            driver::uart::puts("Error: execution level is not EL3\n");
+        }
+    }
 
     loop {}
 }

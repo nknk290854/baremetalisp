@@ -272,12 +272,13 @@ pub fn init() -> Option<VMTables> {
         return None;
     }
 
-#[cfg(any(feature = "raspi3", feature = "raspi2"))]
-    let ret = Some(VMTables{el1: init_el1(), firm: init_el2()} );
+//#[cfg(any(feature = "raspi3", feature = "raspi2"))]
+//    let ret = Some(VMTables{el1: init_el1(), firm: init_el2()} );
 
-#[cfg(feature = "raspi4")]
+//#[cfg(feature = "raspi4")]
+//    let ret = Some(VMTables{el1: init_el1(), firm: init_el3()} );
     let ret = Some(VMTables{el1: init_el1(), firm: init_el3()} );
-
+        driver::uart::puts("Initialize mmu done!\n");
     ret
 }
 
@@ -293,33 +294,34 @@ fn init_table_flat(tt: &'static mut [u64], addr: u64) -> &'static mut [u64] {
 
     // L2 table, 4GiB space
     for i in 0..8 {
-        tt[i] = addr + (i as u64 + 1) * 8192 * 8 | 0b11;
+//        tt[i] = addr + (i as u64 + 1) * 8192 * 8 | 0b11;
+	tt[i] = addr + 8192 * 8 | 0b11;
     }
 
     // L3 table, instructions and read only data
     for i in 0..data_start {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i % 8192 + 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_R_R | FLAG_L3_ATTR_MEM;
     }
 
     // L3 table, data and bss
     for i in data_start..no_cache {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i % 8192 + 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM;
     }
 
-    tt[no_cache + 8192] = no_cache as u64 * 64 * 1024 | 0b11 |
+    tt[no_cache % 8192 + 8192] = no_cache as u64 * 64 * 1024 | 0b11 |
         FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_NC;
 
     // L3 table, stack
     for i in stack_start..stack_end {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i %8192+ 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_N | FLAG_L3_ATTR_MEM;
     }
 
     // L3 table
     for i in stack_end..(8192 * 8) {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i %8192 + 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_NS | FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_NC;
     }
 
@@ -328,7 +330,7 @@ fn init_table_flat(tt: &'static mut [u64], addr: u64) -> &'static mut [u64] {
 
     // L3 table, device
     for i in start..end {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i %8192 + 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_NS | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_AF | FLAG_L3_OSH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_DEV;
     }
 
@@ -378,7 +380,7 @@ fn mask_firm(tt: &'static mut [u64]) -> &'static mut [u64] {
     let end = unsafe { &mut __tt_firm_end as *mut u64 as usize } >> 16; // div by 64KiB
     let start = unsafe { &mut __tt_firm_start as *mut u64 as usize } >> 16; // div by 64KiB
     for i in start..end {
-        tt[i + 8192] = 0;
+        tt[i %8192+ 8192] = 0;
     }
 
     tt
@@ -390,14 +392,14 @@ fn mask_el1(tt: &'static mut [u64]) -> &'static mut [u64] {
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize } >> 16; // div by 64KiB
     let start = unsafe { &mut __stack_el0_start as *mut u64 as usize } >> 16; // div by 64KiB
     for i in end..start {
-        tt[i + 8192] = 0;
+        tt[i%8192 + 8192] = 0;
     }
 
     // mask EL1's transition table
     let start = unsafe { &mut __tt_el1_ttbr0_start as *mut u64 as usize } >> 16; // div by 64KiB
     let end = unsafe { &mut __tt_el1_ttbr1_end as *mut u64 as usize } >> 16; // div by 64KiB
     for i in start..end {
-        tt[i + 8192] = 0;
+        tt[i%8192 + 8192] = 0;
     }
 
     tt
@@ -406,23 +408,25 @@ fn mask_el1(tt: &'static mut [u64]) -> &'static mut [u64] {
 /// set up EL3's page table, 64KB page, level 2 and 3 translation tables,
 /// assume 2MiB stack space per CPU
 fn init_el3() -> &'static mut [u64] {
+    driver::uart::puts("MMU::init_el3!\n");
     let addr = unsafe { &mut __tt_firm_start as *mut u64 as u64 };
     let ptr  = addr as *mut u64;
     let tt   = unsafe { slice::from_raw_parts_mut(ptr, 8192 * 10) };
     let tt   = init_table_flat(tt, addr);
-
+    driver::uart::puts("MMU::init_el3:2!\n");
     // detect stack over flow
     let end = unsafe { &mut __stack_firm_end as *mut u64 as usize };
     let start = unsafe { &mut __stack_firm_start as *mut u64 as usize };
-
+    driver::uart::puts("MMU::init_el3:3!\n");
     // #CPU
     let nc = (start - end) >> 21; // div by 2MiB (32 pages)
     for i in 0..(nc - 1) {
-        tt[(end >> 16) + i * 32 + 8192] = 0;
+        tt[((end >> 16) + i * 32)%8192 + 8192] = 0;
     }
 
+    driver::uart::puts("MMU::init_el3:4!\n");
     let tt = mask_el1(tt);
-
+    driver::uart::puts("MMU::init_el3:5!\n");
     // first, set Memory Attributes array, indexed by PT_MEM, PT_DEV, PT_NC in our example
     unsafe { asm!("msr mair_el3, $0" : : "r" (get_mair())) };
 
@@ -431,13 +435,17 @@ fn init_el3() -> &'static mut [u64] {
 
     // tell the MMU where our translation tables are.
     unsafe { asm!("msr ttbr0_el3, $0" : : "r" (addr + 1)) };
+    driver::uart::puts("MMU::init_el3:6!\n");
 
     // finally, toggle some bits in system control register to enable page translation
     let mut sctlr: u64;
+    driver::uart::puts("MMU::init_el3:7!\n");
     unsafe { asm!("dsb ish; isb; mrs $0, sctlr_el3" : "=r" (sctlr)) };
+    driver::uart::puts("MMU::init_el3:8!\n");
     sctlr = update_sctlr(sctlr);
+    driver::uart::puts("MMU::init_el3:9!\n");
     unsafe { asm!("msr sctlr_el3, $0; dsb sy; isb" : : "r" (sctlr)) };
-
+    driver::uart::puts("MMU::init_el3: end\n");
     tt
 }
 
@@ -504,7 +512,7 @@ fn init_el1() -> &'static mut [u64] {
     let end = unsafe { &mut __stack_el0_end as *mut u64 as usize } >> 16;
     let start = unsafe { &mut __stack_el0_start as *mut u64 as usize } >> 16;
     for i in end..start {
-        tt[i + 8192] = (i << 16) as u64 | 0b11 |
+        tt[i%8192 + 8192] = (i << 16) as u64 | 0b11 |
             FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM;
     }
 
@@ -512,14 +520,14 @@ fn init_el1() -> &'static mut [u64] {
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize } >> 16; // div by 64KiB
     let start = unsafe { &mut __stack_el1_start as *mut u64 as usize } >> 16; // div by 64KiB
     for i in end..start {
-        tt[i + 8192] = 0;
+        tt[i%8192 + 8192] = 0;
     }
 
     // EL0, heap
     let start = unsafe { &mut __el0_heap_start as *mut u64 as usize } >> 16;
     let end = unsafe { &mut __el0_heap_end as *mut u64 as usize } >> 16;
     for i in start..end {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i%8192 + 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM;
     }
 
@@ -529,11 +537,13 @@ fn init_el1() -> &'static mut [u64] {
     // kernel space memory
     let ttbr1 = unsafe { &mut __tt_el1_ttbr1_start as *mut u64 as u64 };
     let ptr  = ttbr1 as *mut u64;
+//    let tt   = unsafe { slice::from_raw_parts_mut(ptr, 8192 * 2) };
     let tt   = unsafe { slice::from_raw_parts_mut(ptr, 8192 * 2) };
 
     // zero clear
     for v in tt.iter_mut() {
-        *v = 0;
+	//        *v = 0;
+	*v = (ttbr1 + 65536) | 0b11;
     }
 
     tt[0] = (ttbr1 + 65536) | 0b11;
@@ -541,25 +551,26 @@ fn init_el1() -> &'static mut [u64] {
     // kernel stack
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize } >> 16;
     let start = unsafe { &mut __stack_el1_start as *mut u64 as usize } >> 16;
+    driver::uart::puts("TTBR1 initialize start!\n");
     for i in end..start {
-        tt[i + 8192] = (i << 16) as u64 | 0b11 |
+        tt[i % 8192 + 8192] = (i << 16) as u64 | 0b11 |
             FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_N | FLAG_L3_ATTR_MEM;
     }
-
+    driver::uart::puts("TTBR1 initialize end!\n");
     // detect stack over flow
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize };
     for i in 0..(nc - 1) {
-        tt[(end >> 16) + i * 32 + 8192] = 0;
+        tt[(end >> 16) % 8129 + i * 32 + 8192] = 0;
     }
 
     // user space transition table
     let start = unsafe { &mut __tt_el1_ttbr0_start as *mut u64 as usize } >> 16;
     let end = unsafe { &mut __tt_el1_ttbr0_end as *mut u64 as usize } >> 16;
     for i in start..end {
-        tt[i + 8192] = (i * 64 * 1024) as u64 | 0b11 |
+        tt[i % 8192 + 8192] = (i * 64 * 1024) as u64 | 0b11 |
             FLAG_L3_NS | FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_N | FLAG_L3_ATTR_NC;
     }
-
+    driver::uart::puts("TTBR1 initialize end2!\n");
     //-------------------------------------------------------------------------
 
     // first, set Memory Attributes array, indexed by PT_MEM, PT_DEV, PT_NC in our example
@@ -568,7 +579,7 @@ fn init_el1() -> &'static mut [u64] {
     let mut mmfr: u64;
     unsafe { asm!("mrs $0, id_aa64mmfr0_el1" : "=r" (mmfr)) };
     let b = mmfr & 0xF;
-
+    driver::uart::puts("TTBR1 initialize end3!\n");
     let tcr: u64 =
          b << 32 |
          3 << 30 | // 64KiB granule, TTBR1_EL1
@@ -584,11 +595,11 @@ fn init_el1() -> &'static mut [u64] {
 
     // next, specify mapping characteristics in translate control register
     unsafe { asm!("msr tcr_el1, $0" : : "r" (tcr)) };
-
+    driver::uart::puts("TTBR1 initialize end4!\n");
     // tell the MMU where our translation tables are.
     unsafe { asm!("msr ttbr0_el1, $0" : : "r" (ttbr0 + 1)) };
     unsafe { asm!("msr ttbr1_el1, $0" : : "r" (ttbr1 + 1)) };
-
+    driver::uart::puts("TTBR1 initialize end5!\n");
     // finally, toggle some bits in system control register to enable page translation
     let mut sctlr: u64;
     unsafe { asm!("dsb ish; isb; mrs $0, sctlr_el1" : "=r" (sctlr)) };
@@ -597,6 +608,6 @@ fn init_el1() -> &'static mut [u64] {
         1 << 4 // clear SA0
     );
     unsafe { asm!("msr sctlr_el1, $0; dsb sy; isb" : : "r" (sctlr)) };
-
+    driver::uart::puts("TTBR1 initialize end!\n");
     tt
 }
