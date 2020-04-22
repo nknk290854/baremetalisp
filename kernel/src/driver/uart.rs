@@ -18,9 +18,12 @@ pub fn init(uart_clock: u64, baudrate: u64) {
 pub fn send(c : u32) {
     // wait until we can send
     unsafe { asm!("nop;") };
-    while (unsafe { volatile_load(UART0_LSR) } & (1 <<6)) == 0 {
-        unsafe { asm!("nop;") };
+    for _i in 0..1000 {
+	unsafe { asm!("nop;"::::"volatile") };
     }
+//    while (unsafe { volatile_load(UART0_LSR) } & (1 <<6)) == 0 {
+//        unsafe { asm!("nop;") };
+//    }
 
     // write the character to the buffer
     unsafe {

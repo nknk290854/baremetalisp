@@ -40,7 +40,10 @@ extern int64_t* __ram_end;
 #define writel(v, addr)		(*((volatile unsigned long  *)(addr)) = (unsigned long)(v))
 static void uart_putc_for_c(char c)
 {
-  	while (!(readl(UART0_LSR) & (1 << 6))) {}
+  int i;
+  for (i=0;i<1000;i++){
+    asm volatile ("nop");
+  }
 	writel(c, UART0_THR);
 }
 
@@ -223,7 +226,7 @@ uint64_t update_sctlr(uint64_t sctlr){
         1 << 12 | // set I, instruction cache
         1 <<  2 | // set C, data cache
         1;        // set M, enable MMU
-    return (new_sctlr & !(
+    return (new_sctlr & ~(
 			  1 << 25 | // clear EE
 			  1 << 19 | // clear WXN
 			  1 <<  3 | // clear SA
@@ -257,8 +260,6 @@ void init_el1(){
   uint64_t ttbr1 = (uint64_t)(&__tt_el1_ttbr1_start);
   init_table_flat(ttbr1);
 
-
-  return;
   uint64_t mmfr;
   asm volatile("mrs %0, id_aa64mmfr0_el1" : "=r" (mmfr));
   uint64_t b = mmfr & 0xF;
@@ -287,7 +288,7 @@ void init_el1(){
   uint64_t sctlr;
   asm volatile("dsb ish; isb; mrs %0, sctlr_el1" : "=r" (sctlr));
   sctlr = update_sctlr(sctlr);
-  sctlr &= !(
+  sctlr &= ~(
 	     1 << 4 // clear SA0
 	     );
   asm volatile("msr sctlr_el1, %0; dsb sy; isb" : : "r" (sctlr));
@@ -299,7 +300,7 @@ void init_el3(){
 
   mask_el1();
 
-  return;
+  
   // first, set Memory Attributes array, indexed by PT_MEM, PT_DEV, PT_NC in our example
   asm volatile("msr mair_el3, %0" : : "r" (get_mair()));
 
@@ -316,11 +317,30 @@ void init_el3(){
   asm volatile("msr sctlr_el3, %0; dsb sy; isb" : : "r" (sctlr));
 }
 
+void print_addr(void);
+#define PCR_CPU_X_BASE_ADDR		(0x01C20800)
+#define PCR_PB_CFG0				(PCR_CPU_X_BASE_ADDR + (0x24 * 1))
+#define PCR_PB_DAT				(PCR_CPU_X_BASE_ADDR + (0x24 * 1) + 0x10)
+
+void led_blink(){
+  *(unsigned int *)(PCR_PB_CFG0) = 0x00000100;
+  volatile int j;
+  unsigned long val = 0x04;
+  while (1) {
+    volatile int i;
+    for(i = 0; i < 500000; i++);
+    *(unsigned int *)(PCR_PB_DAT) ^= val;
+    //		val ^= 0x04;
+  }
+}
+
 void mmu_init(){
+  print_addr();
   uart_puts_for_c("mmu_init start\n");
   uart_puts_for_c("mmu_init el1 start\n");
-  //  init_el1();
+  init_el1();
   uart_puts_for_c("mmu_init el3 start\n");
-  //  init_el3();
+  init_el3();
+  led_blink();
   uart_puts_for_c("mmu_init end\n");
 }

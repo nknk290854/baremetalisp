@@ -48,6 +48,7 @@ baremetalisp: $(RUSTLIB) $(MMU_OBJ) $(ASM_OBJ) $(C_OBJ)
 	$(LD) -T link.ld -o baremetalisp $(ASM_OBJ) $(C_OBJ) $(RUSTLIB)
 
 kernel8.img: baremetalisp
+	aarch64-linux-gnu-objdump -D baremetalisp > baremetalisp.lst
 	aarch64-linux-gnu-objcopy -O binary baremetalisp kernel8.img
 
 AARCH64_START_ADDRESS=0x40080000

@@ -110,25 +110,12 @@
 #define GICD_IGROUPR        0x80
 
 _start:
-	ldr  x1,=0x01C28000
-	ldr  x2,=message
-loop:	         ldrb w0, [x2]
-	add  x2, x2, #1
-	cmp  w0, #0
-	beq  completed
-	strb w0, [x1]
-	b    loop
 completed:
-    bl      mmu_init
-    bl      entry
+//    bl      mmu_init
+//    bl      entry
 	// set stack before _start
-    ldr     x1, =0x40880000
+    ldr     x1, =__stack_firm_start
     mov     sp, x1
-    bl      entry
-
-message:
-	.asciz "*** Hello from aarch64! ***"
-
 	
 #ifndef NOEL3
     /* Set up CNTFRQ_EL0 */
@@ -143,6 +130,7 @@ message:
     mov x0, #(1 << 8)
     msr CPTR_EL3, x0
 
+
     /* Set up SCR */
     mov x0, #SCR_VAL
     msr SCR_EL3, x0
@@ -152,6 +140,7 @@ message:
     msr CPUECTLR_EL1, x0
 
 #endif // NOEL3
+
     // enable FP/SIMD on EL2 and EL1
     mov x0, #(0x32FF)
     msr CPTR_EL2, x0
@@ -164,6 +153,7 @@ message:
     mrs     x1, mpidr_el1
     and     x1, x1, #0xFF
     cbz     x1, .L2
+
 
     // if cpu id > 0 then stop
 .L1:
@@ -186,6 +176,7 @@ message:
     sub     w2, w2, #1
     cbnz    w2, .L3
 
+	
 .L4:
     // set exception vector
     ldr     x1, =exception_vector_el1

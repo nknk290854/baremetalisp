@@ -52,6 +52,9 @@ pub fn enabled() -> Option<bool> {
         Some(sctlr & 1 == 1)
     } else if el == 3 {
         unsafe { asm!("mrs $0, SCTLR_EL3" : "=r"(sctlr)) };
+	driver::uart::puts("sctlr = ");
+	driver::uart::hex(sctlr as u64);
+	driver::uart::puts("\n");
         Some((sctlr & 1) == 1)
     } else {
         None
@@ -168,7 +171,8 @@ pub const DRIVER_MEM_START: usize =  0xfd000000; // maybe...
 #[cfg(feature = "raspi4")]
 pub const DRIVER_MEM_END:   usize = 0x100000000; // maybe...
 
-pub fn print_addr() {
+#[no_mangle]
+pub extern fn print_addr() {
     let addr = unsafe { &mut __data_start as *mut u64 as u64 };
     driver::uart::puts("__data_start         = 0x");
     driver::uart::hex(addr as u64);
