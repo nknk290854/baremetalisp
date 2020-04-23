@@ -1,5 +1,5 @@
 # Default to the RPi4
-BSP=raspi3
+#BSP=pine64
 ifndef BSP
 	BSP = raspi4
 endif
@@ -9,6 +9,8 @@ ifeq ($(BSP),raspi3)
 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
 else ifeq ($(BSP),raspi4)
 	RUSTC_MISC_ARGS = -C target-cpu=cortex-a72
+else ifeq ($(BSP),pine64)
+	RUSTC_MISC_ARGS = -C target-cpu=cortex-a53
 endif
 
 #ASM_FILE=asm/aarch64.S

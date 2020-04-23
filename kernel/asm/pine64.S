@@ -116,8 +116,6 @@ completed:
 	// set stack before _start
     ldr     x1, =__stack_firm_start
     mov     sp, x1
-	
-#ifndef NOEL3
     /* Set up CNTFRQ_EL0 */
     ldr x0, =OSC_FREQ
     msr CNTFRQ_EL0, x0
@@ -138,10 +136,9 @@ completed:
     /* Set SMPEN */
     mov x0, #CPUECTLR_EL1_SMPEN
     msr CPUECTLR_EL1, x0
+    bl      setup_gic
 
-#endif // NOEL3
-
-    // enable FP/SIMD on EL2 and EL1
+   // enable FP/SIMD on EL2 and EL1
     mov x0, #(0x32FF)
     msr CPTR_EL2, x0
     mov x0, #(0b110011 << 16)
@@ -206,11 +203,34 @@ completed:
 
     msr     DAIFClr, #0x0f // enable all interrupt
 
-    bl      entry
+	//    bl      main
+	bl entry
 .L5:
     wfe
     b       .L5
 
+setup_gic:
+    mrs     x0, MPIDR_EL1
+    ldr     x2, =GIC_DISTB
+    tst     x0, #0x3
+    b.eq    2f // primary core
+
+    mov     w0, #3 // Enable group 0 and 1 IRQs from distributor
+    str     w0, [x2, #GICD_CTRLR]
+2:
+    add     x1, x2, #(GIC_CPUB - GIC_DISTB)
+    mov     w0, #0x1e7
+    str     w0, [x1, #GICC_CTRLR] // Enable group 1 IRQs from CPU interface
+    mov     w0, #0xff
+    str     w0, [x1, #GICC_PMR] // priority mask
+    add     x2, x2, #GICD_IGROUPR
+    mov     x0, #(IT_NR * 4)
+    mov     w1, #~0 // group 1 all the things
+3:
+    subs    x0, x0, #4
+    str     w1, [x2, x0]
+    b.ne    3b
+    ret
 	
 .macro CALL_WITH_CONTEXT handler elr_reg spsr_reg
     // Make room on the stack for the exception context.

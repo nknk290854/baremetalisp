@@ -10,22 +10,36 @@ const UART0_LSR:  *mut u32 = 0x01C28014  as *mut u32;
 /// Initialiaze UART0 for serial console.
 /// Set baud rate and characteristics (8N1) and map to GPIO 14 (Tx) and 15 (Rx).
 /// 8N1 stands for "eight data bits, no parity, one stop bit".
+
+extern {
+    fn uart0_putc(c : u8);
+    fn uart0_init();
+}
 pub fn init(uart_clock: u64, baudrate: u64) {
     // do nothing
 }
 
 /// send a character to serial console
+//pub fn send(c :u32){
+//    unsafe {uart0_putc(c as u8);}
+//}
+
 pub fn send(c : u32) {
     // wait until we can send
     unsafe { asm!("nop;") };
-    for _i in 0..1000 {
-	unsafe { asm!("nop;"::::"volatile") };
-    }
-//    while (unsafe { volatile_load(UART0_LSR) } & (1 <<6)) == 0 {
-//        unsafe { asm!("nop;") };
+//    for _i in 0..1000 {
+//	unsafe { asm!("nop;"::::"volatile") };
 //    }
+    while (unsafe { volatile_load(UART0_LSR) } & (1 <<5)) == 0 {
+        unsafe { asm!("nop;") };
+    }
 
     // write the character to the buffer
+    if c == '\n' as u32 {
+	unsafe {
+            volatile_store(UART0_DR, '\r' as u32);
+	}
+    }
     unsafe {
         volatile_store(UART0_DR, c);
     }
@@ -35,9 +49,6 @@ pub fn send(c : u32) {
 pub fn puts(s : &str) {
     for c in s.bytes() {
         send(c as u32);
-        if c == '\n' as u8 {
-            send('\r' as u32);
-        }
     }
 }
 

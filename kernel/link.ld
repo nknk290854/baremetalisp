@@ -1,11 +1,12 @@
 SECTIONS
 {
 /*    . = 0x80000;*/
+
     .device : {
     	    __device_start = 0x01C00000;
 	    __device_end   = 0x01F10000;
     }
-   
+
     . = 0x40080000;
     __ram_start =.;
     .init : { KEEP(*(.init)) }
@@ -14,7 +15,7 @@ SECTIONS
     PROVIDE(_data = .);
     .data : ALIGN(1024 * 64) {
         __data_start = .;
-        *(.data .data.* .gnu.linkonce.d*)
+        *(.data .data.* .gnu.linkonce.d* .gnu.hash)
         __data_end = .;
     }
     .bss (NOLOAD) : ALIGN(1024 * 64) {
@@ -48,8 +49,8 @@ SECTIONS
     __el0_heap_start = __tt_el1_ttbr1_end;
     __el0_heap_end   =  __el0_heap_start  + 64 * 1024 * 1024;
 
-    _end = __el0_heap_end;
-    __ram_end =.;
+    __ram_end =__el0_heap_end;
+    _end = __ram_end;
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
 __bss_size = (__bss_end - __bss_start) >> 3;
