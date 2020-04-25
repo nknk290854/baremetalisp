@@ -87,8 +87,8 @@
 #define SCR_RES1_4          BIT(4)
 #define SCR_NS              BIT(0)
 #define SCR_VAL \
-    (SCR_RW | SCR_HCE | SCR_RES1_5 | SCR_RES1_4 | SCR_NS)
-
+	(SCR_RW | SCR_HCE | SCR_RES1_5 | SCR_RES1_4 | SCR_NS)
+	
 #define CPUECTLR_EL1        S3_1_C15_C2_1
 #define CPUECTLR_EL1_SMPEN  BIT(6)
 
@@ -231,6 +231,52 @@ setup_gic:
     str     w1, [x2, x0]
     b.ne    3b
     ret
+
+.global el3_to_el1_asm
+el3_to_el1_asm:
+    ldr     x1, =__stack_el1_start
+    msr     sp_el1, x1
+
+	mov x0, #3 << 20
+	msr cpacr_el1, x0           /* Enable FP/SIMD at EL1 */
+
+	/*=============================================================*/
+	/*      Initialize sctlr_el1                                   */
+	/*=============================================================*/
+	mov x0, xzr
+	orr x0, x0, #(1 << 29)          /* Checking http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500d/CIHDIEBD.html */
+	orr x0, x0, #(1 << 28)          /* Bits 29,28,23,22,20,11 should be 1 (res1 on documentation) */
+	orr x0, x0, #(1 << 23)
+	orr x0, x0, #(1 << 22)
+	orr x0, x0, #(1 << 20)
+	orr x0, x0, #(1 << 11)
+	msr sctlr_el1, x0
+
+	/*=============================================================*/
+	/*      Initialize scr_el3                                     */
+	/*=============================================================*/
+	mrs x0, scr_el3
+	orr x0, x0, #(1<<10)        /* Lower EL is 64bits */
+	msr scr_el3, x0
+
+	/*=============================================================*/
+	/*      Initialize spsr_el3                                    */
+	/*=============================================================*/
+	mov x0, xzr
+	mov x0, #0b00101            /* EL1 */
+	orr x0, x0, #(1 << 8)       /* Enable SError and External Abort. */
+	orr x0, x0, #(1 << 7)       /* IRQ interrupt Process state mask. */
+	orr x0, x0, #(1 << 6)       /* FIQ interrupt Process state mask. */
+	msr spsr_el3, x0
+
+	/*=============================================================*/
+	/*      Initialize elr_el3                                     */
+	/*=============================================================*/
+	adr x0, el1_entry
+	msr elr_el3, x0
+
+	eret
+	
 	
 .macro CALL_WITH_CONTEXT handler elr_reg spsr_reg
     // Make room on the stack for the exception context.

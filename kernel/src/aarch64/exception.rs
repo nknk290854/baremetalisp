@@ -46,6 +46,12 @@ pub fn get_esr_el3() -> u32 {
     esr
 }
 
+pub fn get_far_el3() -> u64 {
+    let far;
+    unsafe { asm!("mrs $0, far_el3" : "=r"(far)) };
+    far
+}
+
 // from the current EL using the current SP0
 #[no_mangle]
 pub fn curr_el_sp0_sync_el3(__ctx: *mut Context) {
@@ -73,6 +79,8 @@ pub fn curr_el_spx_sync_el3(ctx: *mut Context) {
     let r = unsafe { &*ctx };
     driver::uart::puts("EL3 exception: SPX Sync\nELR = 0x");
     driver::uart::hex(r.elr);
+    driver::uart::puts("\nFAR = 0x");
+    driver::uart::hex(get_far_el3());
     driver::uart::puts("\nSPSR = 0x");
     driver::uart::hex(r.spsr as u64);
     driver::uart::puts("\nESR = 0x");

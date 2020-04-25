@@ -1,11 +1,20 @@
 use crate::aarch64;
+use crate::driver;
 
 extern "C" {
     static mut __stack_el1_end: u64;
     static mut __stack_el1_start: u64;
+    fn el3_to_el1_asm();
 }
 
 pub fn el3_to_el1() {
+    driver::uart::puts("el3_to_el1\n");
+    unsafe{el3_to_el1_asm();}
+}
+
+pub fn el3_to_el1_org() {
+    driver::uart::puts("el3_to_el1\n");
+
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize };
     let start = unsafe { &mut __stack_el1_start as *mut u64 as usize };
 
@@ -13,7 +22,8 @@ pub fn el3_to_el1() {
     let size = (start - end) / nc;
 
     let aff = aarch64::cpu::get_affinity_lv0();
-    let addr = start - size * aff as usize + aarch64::mmu::EL1_ADDR_OFFSET;
+//    let addr = start - size * aff as usize + aarch64::mmu::EL1_ADDR_OFFSET;
+    let addr = start;
 
     unsafe {
         asm!(
@@ -32,7 +42,8 @@ pub fn el3_to_el1() {
              msr sp_el1, x0    // set stack pointer
              mov x0, #0b101    // EL1h
              msr spsr_el3, x0
-             adr x0, el1_entry // entry point
+//             adr x0, el1_entry // entry point
+             adr x0, led_blink
              msr elr_el3, x0
              eret"
             :
@@ -40,4 +51,5 @@ pub fn el3_to_el1() {
             : "x0"
         );
     }
+    driver::uart::puts("el3_to_el1 done\n");
 }

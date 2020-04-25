@@ -247,7 +247,7 @@ uint64_t init_table_flat(uint64_t table_addr){
   init_l3_page_table((uint64_t*)l3_ram_table,
 		     ram_start,
 		     ram_start, ram_end,
-		     FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM);
+		     FLAG_L3_NS | FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM);
   // 		     FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM);
   init_l3_page_table((uint64_t*)l3_ram_table,
 		     ram_start,
