@@ -87,8 +87,8 @@
 #define SCR_RES1_4          BIT(4)
 #define SCR_NS              BIT(0)
 #define SCR_VAL \
-	(SCR_RW | SCR_HCE | SCR_RES1_5 | SCR_RES1_4 | SCR_NS)
-	
+	(SCR_RW | SCR_HCE | SCR_RES1_5 | SCR_RES1_4)
+//		(SCR_RW | SCR_HCE | SCR_RES1_5 | SCR_RES1_4 | SCR_NS)	
 #define CPUECTLR_EL1        S3_1_C15_C2_1
 #define CPUECTLR_EL1_SMPEN  BIT(6)
 
@@ -98,7 +98,8 @@
 #define SPSR_EL3_F          BIT(6)
 #define SPSR_EL3_MODE_el3H  9
 #define SPSR_EL3_VAL \
-    (SPSR_EL3_D | SPSR_EL3_A | SPSR_EL3_I | SPSR_EL3_F | SPSR_EL3_MODE_el3H)
+	(SPSR_EL3_D | SPSR_EL3_A | SPSR_EL3_I | SPSR_EL3_F | SPSR_EL3_MODE_el3H)
+
 
 #define L2CTLR_EL1          S3_1_C11_C0_2
 

@@ -198,17 +198,36 @@ static const void init_l3_page_table(uint64_t *l3_page_table,
   uint64_t end   = end_addr>>16;
   uint64_t i;
   
-  for(i=start;i<=end;i++){
+  for(i=start;i<end;i++){
     l3_page_table[i-l3_offset] = i <<16 | attr | 0b11;
   }
 }
 
 static const uint64_t device_start  = (uint64_t)(&__device_start);
 static const uint64_t device_end    = (uint64_t)(&__device_end);
+static const uint64_t data_start    = (uint64_t)(&__data_start);
+static const uint64_t data_end      = (uint64_t)(&__data_end);
 static const uint64_t ram_start     = (uint64_t)(&__ram_start);
-static const uint64_t stack_end     = (uint64_t)(&__stack_end);
 static const uint64_t ram_end       = (uint64_t)(&__ram_end);
-static const uint64_t tt_firm_start = (uint64_t)(&__tt_firm_start);
+static const uint64_t bss_start     = (uint64_t)(&__bss_start);
+static const uint64_t bss_end       = (uint64_t)(&__bss_end);
+static const uint64_t no_cache      = (uint64_t)(&__no_cache);
+static const uint64_t stack_start  = (uint64_t)(&__stack_start);
+static const uint64_t stack_firm_end  = (uint64_t)(&__stack_firm_end);
+static const uint64_t stack_firm_start  = (uint64_t)(&__stack_firm_start);
+static const uint64_t stack_el1_end  = (uint64_t)(&__stack_el1_end);
+static const uint64_t stack_el1_start  = (uint64_t)(&__stack_el1_start);
+static const uint64_t stack_el0_end  = (uint64_t)(&__stack_el0_end);
+static const uint64_t stack_el0_start  = (uint64_t)(&__stack_el0_start);
+static const uint64_t stack_end  = (uint64_t)(&__stack_end);
+static const uint64_t tt_firm_start  = (uint64_t)(&__tt_firm_start);
+static const uint64_t tt_firm_end  = (uint64_t)(&__tt_firm_end);
+static const uint64_t tt_el1_ttbr0_start  = (uint64_t)(&__tt_el1_ttbr0_start);
+static const uint64_t tt_el1_ttbr0_end  = (uint64_t)(&__tt_el1_ttbr0_end);
+static const uint64_t tt_el1_ttbr1_start  = (uint64_t)(&__tt_el1_ttbr1_start);
+static const uint64_t tt_el1_ttbr1_end  = (uint64_t)(&__tt_el1_ttbr1_end);
+static const uint64_t el0_heap_start  = (uint64_t)(&__el0_heap_start);
+static const uint64_t el0_heap_end  = (uint64_t)(&__el0_heap_end);
 static const uint64_t ttbr0         = (uint64_t)(&__tt_el1_ttbr0_start);
 static const uint64_t ttbr1         = (uint64_t)(&__tt_el1_ttbr1_start);
 
@@ -248,7 +267,33 @@ uint64_t init_table_flat(uint64_t table_addr){
 		     ram_start,
 		     ram_start, ram_end,
 		     FLAG_L3_NS | FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM);
-  // 		     FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM);
+
+  init_l3_page_table((uint64_t*)l3_ram_table,
+		     ram_start,
+		     ram_start, data_start,
+		     FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_R_R | FLAG_L3_ATTR_MEM);
+
+  init_l3_page_table((uint64_t*)l3_ram_table,
+		     ram_start,
+		     data_start, no_cache,
+		     FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_MEM);
+
+
+  init_l3_page_table((uint64_t*)l3_ram_table,
+		     ram_start,
+		     no_cache, stack_start,
+		     FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_NC);
+
+  init_l3_page_table((uint64_t*)l3_ram_table,
+		     ram_start,
+		     stack_start, stack_end,
+		     FLAG_L3_AF | FLAG_L3_XN | FLAG_L3_PXN | FLAG_L3_ISH | FLAG_L3_SH_RW_N | FLAG_L3_ATTR_MEM);
+
+  init_l3_page_table((uint64_t*)l3_ram_table,
+		     ram_start,
+		     stack_end, ram_end,
+		     FLAG_L3_NS | FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_NC);
+  
   init_l3_page_table((uint64_t*)l3_ram_table,
 		     ram_start,
 		     tt_firm_start, ram_end,
@@ -286,27 +331,50 @@ uint64_t update_sctlr(uint64_t sctlr){
         1 << 12 | // set I, instruction cache
         1 <<  2 | // set C, data cache
         1;        // set M, enable MMU
-    return (new_sctlr & ~(
+    return (new_sctlr & (~(
 			  1 << 25 | // clear EE
 			  1 << 19 | // clear WXN
 			  1 <<  3 | // clear SA
 			  1 <<  1   // clear A
-			  ));
+			   )));
       
 }
 
 /// mask firmware's stack and transition table
 //fn mask_firm(tt: &'static mut [u64]) -> &'static mut [u64] {
-void mask_firm(uint64_t addr){
+void mask_firm(uint64_t table_addr, uint64_t table_top_addr){
   // do nothing
   // mask EL3 stack;
-  //
+  uint64_t l3_offset = (table_top_addr&(~((1<<29)-1)))>>16;
+  uint64_t* l3_page_table = (uint64_t*)(table_addr + page_table_size * 2);
+  uint64_t start = tt_firm_start>>16;
+  uint64_t end   = tt_firm_end>>16;
+  uint64_t i;
+  
+  for(i=start;i<end;i++){
+    l3_page_table[i-l3_offset] = 0;
+  }
 }
 /// mask EL1's stack and transition table
-void mask_el1(){
+void mask_el1(uint64_t addr, uint64_t table_top_addr){
   // do nothing
   // mask EL1, LE0, EL1 transition table
   //
+  uint64_t i;
+  uint64_t l3_offset = (table_top_addr&(~((1<<29)-1)))>>16;
+  uint64_t* l3_page_table = (uint64_t*)(addr + page_table_size * 2);
+  uint64_t start = stack_el0_start>>16;
+  uint64_t end   = stack_el0_end>>16;
+
+  for(i=start;i<end;i++){
+    l3_page_table[i-l3_offset] = 0;
+  }
+
+  start = tt_el1_ttbr0_start>>16;
+  end   = tt_el1_ttbr1_end>>16;
+  for(i=start;i<end;i++){
+    l3_page_table[i-l3_offset] = 0;
+  }
 }
 
 void init_el1(){
@@ -353,7 +421,9 @@ void init_el1(){
 void dump_el3_table(void);
 void init_el3(){
   init_table_flat(tt_firm_start);
-  mask_el1();
+
+  mask_el1(tt_firm_start, ram_start);
+
   // first, set Memory Attributes array, indexed by PT_MEM, PT_DEV, PT_NC in our example
   asm volatile("msr mair_el3, %0" : : "r" (get_mair()));
 
