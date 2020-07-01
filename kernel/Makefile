@@ -29,16 +29,16 @@ TARGET=aarch64-unknown-none
 RUSTLIB=target/$(TARGET)/release/libbaremetalisp.a
 RUSTFLAGS=$(RUSTC_MISC_ARGS)
 
-CC=aarch64-linux-gnu-gcc
-LD=aarch64-linux-gnu-ld
+CC=clang
+LD=rust-lld -flavor gnu
 
 all: kernel8.img
 
 $(ASM_OBJ): $(ASM_FILE)
-	$(CC) -c $(ASM_FILE) -o $(ASM_OBJ) -D$(BSP)
+	$(CC) --target=aarch64-elf -c $(ASM_FILE) -o $(ASM_OBJ) -D$(BSP)
 
 $(C_OBJ): $(C_FILE)
-	$(CC) -c $(C_FILE) -o $(C_OBJ) -D$(BSP)
+	$(CC) --target=aarch64-elf -c $(C_FILE) -o $(C_OBJ) -D$(BSP)
 
 $(RUSTLIB): FORCE
 	RUSTFLAGS="$(RUSTFLAGS)" cargo xrustc --features $(BSP) --target $(TARGET) --release
@@ -47,11 +47,10 @@ doc:
 	cargo xdoc --target=$(TARGET) --features $(BSP) --document-private-items
 
 baremetalisp: $(RUSTLIB) $(MMU_OBJ) $(ASM_OBJ) $(C_OBJ)
-	$(LD) -T link.ld -o baremetalisp $(ASM_OBJ) $(C_OBJ) $(RUSTLIB)
+	$(LD) -m aarch64elf -nostdlib -T link.ld -o baremetalisp $(ASM_OBJ) $(C_OBJ) $(RUSTLIB)
 
 kernel8.img: baremetalisp
-	aarch64-linux-gnu-objdump -D baremetalisp > baremetalisp.lst
-	aarch64-linux-gnu-objcopy -O binary baremetalisp kernel8.img
+	rust-objcopy -O binary baremetalisp kernel8.img
 
 AARCH64_START_ADDRESS=0x40080000
 SUNXI_FEL=sunxi-fel

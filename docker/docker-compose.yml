@@ -1,9 +1,9 @@
 version: '3'
 services:
-  baremetalisp:
+  baremetalisp-pine64:
     build: .
     volumes:
-      - "../../:/hostdir"
+      - "../:/hostdir"
     stdin_open: true
     tty: true
     working_dir: "/hostdir"

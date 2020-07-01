@@ -42,13 +42,13 @@ pub struct Context {
 
 pub fn get_esr_el3() -> u32 {
     let esr;
-    unsafe { asm!("mrs $0, esr_el3" : "=r"(esr)) };
+    unsafe { llvm_asm!("mrs $0, esr_el3" : "=r"(esr)) };
     esr
 }
 
 pub fn get_far_el3() -> u64 {
     let far;
-    unsafe { asm!("mrs $0, far_el3" : "=r"(far)) };
+    unsafe { llvm_asm!("mrs $0, far_el3" : "=r"(far)) };
     far
 }
 
@@ -156,7 +156,7 @@ pub fn lower_el_aarch32_serror_el3(_ctx: *mut Context) {
 
 pub fn get_esr_el2() -> u32 {
     let esr;
-    unsafe { asm!("mrs $0, esr_el2" : "=r"(esr)) };
+    unsafe { llvm_asm!("mrs $0, esr_el2" : "=r"(esr)) };
     esr
 }
 
@@ -261,7 +261,7 @@ pub fn lower_el_aarch32_serror_el2(_ctx: *mut Context) {
 
 pub fn get_esr_el1() -> u32 {
     let esr;
-    unsafe { asm!("mrs $0, esr_el1" : "=r"(esr)) };
+    unsafe { llvm_asm!("mrs $0, esr_el1" : "=r"(esr)) };
     esr
 }
 

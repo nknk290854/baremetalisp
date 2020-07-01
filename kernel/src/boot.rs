@@ -2,7 +2,7 @@ use super::driver;
 use super::aarch64;
 
 pub fn run() {
-    
+
     print_el();
     print_fortune();
     print_splash();
@@ -14,7 +14,7 @@ fn print_el() {
     let el = aarch64::el::get_current_el();
     driver::uart::decimal(el as u64);
     driver::uart::puts("\n");
-
+/*
     driver::uart::puts("[MMU         ] ");
     match aarch64::mmu::enabled() {
         Some(m) => {
@@ -28,7 +28,7 @@ fn print_el() {
             driver::uart::puts("failed to access the system control register\n");
         }
     }
-
+    */
 }
 
 fn print_fortune() {
@@ -53,4 +53,3 @@ fn print_splash() {
                                                                       | |
                                                                       (_)\n");
 }
-

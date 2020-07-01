@@ -26,7 +26,7 @@ pub fn el3_to_el1_org() {
     let addr = start;
 
     unsafe {
-        asm!(
+        llvm_asm!(
             "mrs x0, hcr_el2
              orr x0, x0, #(1 << 31) // AArch64
              orr x0, x0, #(1 << 1)  // SWIO hardwired on Pi3

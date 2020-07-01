@@ -1,7 +1,7 @@
 #![feature(core_intrinsics)]
 #![feature(lang_items)]
 #![feature(start)]
-#![feature(asm)]
+#![feature(llvm_asm)]
 #![feature(alloc_error_handler)]
 #![no_std]
 #![allow(dead_code)]
@@ -12,7 +12,7 @@ mod driver;
 mod aarch64;
 mod el0;
 mod el1;
-mod el2;
+//mod el2;
 mod el3;
 mod slab;
 mod pager;
@@ -50,17 +50,13 @@ pub fn entry() -> ! {
     driver::uart::puts(" , ");
     driver::uart::hex(device_end);
     driver::uart::puts("\n");
-    
+
 //    aarch64::mmu::init();
     unsafe{mmu_init();};
     boot::run();
 
     match aarch64::el::get_current_el() {
         3 => { el3::el3_to_el1(); }
-	2 => {
-            driver::uart::puts("Warning: execution level is not EL3\n");
-            el2::el2_to_el1();
-        }
         _ => {
             driver::uart::puts("Error: execution level is not EL3\n");
         }

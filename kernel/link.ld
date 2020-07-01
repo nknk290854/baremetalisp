@@ -8,7 +8,7 @@ SECTIONS
     }
 
     . = 0x40080000;
-    __ram_start =.;
+    __ram_start = .;
     .init : { KEEP(*(.init)) }
     .text : { *(.text .text.* .gnu.linkonce.t*) }
     .rodata : { *(.rodata .rodata.* .gnu.linkonce.r*) }
@@ -47,9 +47,9 @@ SECTIONS
     __tt_el1_ttbr1_end   = __tt_el1_ttbr1_start + 1024 * 64 * 2;
 
     __el0_heap_start = __tt_el1_ttbr1_end;
-    __el0_heap_end   =  __el0_heap_start  + 64 * 1024 * 1024;
+    __el0_heap_end   = __el0_heap_start  + 64 * 1024 * 1024;
 
-    __ram_end =__el0_heap_end;
+    __ram_end = __el0_heap_end;
     _end = __ram_end;
    /DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 }
