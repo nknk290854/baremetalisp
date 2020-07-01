@@ -8,12 +8,12 @@ extern "C" {
 }
 
 pub fn el3_to_el1() {
-    driver::uart::puts("el3_to_el1\n");
+//    driver::uart::puts("el3_to_el1\n");
     unsafe{el3_to_el1_asm();}
 }
 
 pub fn el3_to_el1_org() {
-    driver::uart::puts("el3_to_el1\n");
+//    driver::uart::puts("el3_to_el1\n");
 
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize };
     let start = unsafe { &mut __stack_el1_start as *mut u64 as usize };
@@ -26,7 +26,7 @@ pub fn el3_to_el1_org() {
     let addr = start;
 
     unsafe {
-        asm!(
+        llvm_asm!(
             "mrs x0, hcr_el2
              orr x0, x0, #(1 << 31) // AArch64
              orr x0, x0, #(1 << 1)  // SWIO hardwired on Pi3
@@ -51,5 +51,5 @@ pub fn el3_to_el1_org() {
             : "x0"
         );
     }
-    driver::uart::puts("el3_to_el1 done\n");
+//    driver::uart::puts("el3_to_el1 done\n");
 }

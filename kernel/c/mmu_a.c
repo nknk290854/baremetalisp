@@ -4,8 +4,8 @@ typedef long int64_t;
 typedef unsigned int uint32_t;
 void uart0_putc(char c);
 void uart0_puts(const char *s);
-extern int64_t* __device_start;
-extern int64_t* __device_end;
+int64_t* __device_start = 0x01C00000;
+int64_t* __device_end = 0x01F10000;
 extern int64_t* __data_start;
 extern int64_t* __data_end;
 extern int64_t* __ram_start;
@@ -81,7 +81,7 @@ void uart0_puts(const char *s)
 }
 void  uart0_hex(uint64_t h){
   int i;
-  
+
   for (i=60; i>=0;i-=4){
     uint64_t n = (h>>i) & 0xF;
     n += n > 9 ? 0x37 : 0x30;
@@ -91,7 +91,7 @@ void  uart0_hex(uint64_t h){
 
 void  uart0_byte(uint64_t h){
   int i;
-  
+
   uint64_t n = (h>>4) & 0xF;
   n += n > 9 ? 0x37 : 0x30;
   uart0_putc(n);
@@ -158,8 +158,8 @@ static const int page_table_size = 8192 * 8;
 /*
  *
  * Pine64の場合
- * 
- * 
+ *
+ *
  *                   M  K
  * device_start = 0x01C00000;
  * device_end   = 0x01F10000;
@@ -170,8 +170,8 @@ static const int page_table_size = 8192 * 8;
  * device_end   = 0x01F1 0000;
  * ram_start    = 0x40080000;
  * ram_end      = 0x48000000;
- * 
- *   64k(Byte/page) * 8k(entry/L2 table) = 512k 
+ *
+ *   64k(Byte/page) * 8k(entry/L2 table) = 512k
  */
 
 static const void init_l2_page_table(uint64_t *l2_page_table,
@@ -197,7 +197,7 @@ static const void init_l3_page_table(uint64_t *l3_page_table,
   uint64_t start = start_addr>>16;
   uint64_t end   = end_addr>>16;
   uint64_t i;
-  
+
   for(i=start;i<end;i++){
     l3_page_table[i-l3_offset] = i <<16 | attr | 0b11;
   }
@@ -246,11 +246,11 @@ uint64_t init_table_flat(uint64_t table_addr){
   for(i=(uint64_t*)table_addr;(uint64_t)i<(uint64_t)table_addr+page_table_size*8;i++){
     *i = 0;
   }
-  
+
   init_l2_page_table(l2_table,
 		     l3_device_table,
 		     device_start, device_end);
-  
+
 
   init_l3_page_table((uint64_t*)l3_device_table,
 		     device_start,
@@ -293,7 +293,7 @@ uint64_t init_table_flat(uint64_t table_addr){
 		     ram_start,
 		     stack_end, ram_end,
 		     FLAG_L3_NS | FLAG_L3_AF | FLAG_L3_ISH | FLAG_L3_SH_RW_RW | FLAG_L3_ATTR_NC);
-  
+
   init_l3_page_table((uint64_t*)l3_ram_table,
 		     ram_start,
 		     tt_firm_start, ram_end,
@@ -337,7 +337,7 @@ uint64_t update_sctlr(uint64_t sctlr){
 			  1 <<  3 | // clear SA
 			  1 <<  1   // clear A
 			   )));
-      
+
 }
 
 /// mask firmware's stack and transition table
@@ -350,7 +350,7 @@ void mask_firm(uint64_t table_addr, uint64_t table_top_addr){
   uint64_t start = tt_firm_start>>16;
   uint64_t end   = tt_firm_end>>16;
   uint64_t i;
-  
+
   for(i=start;i<end;i++){
     l3_page_table[i-l3_offset] = 0;
   }
@@ -389,7 +389,7 @@ void init_el1(){
   asm volatile("mrs %0, id_aa64mmfr0_el1" : "=r" (mmfr));
   uint64_t b = mmfr & 0xF;
 
-  uint64_t tcr = 
+  uint64_t tcr =
          b << 32 |
          3 << 30 | // 64KiB granule, TTBR1_EL1
          3 << 28 | // inner shadable, TTBR1_EL1
@@ -509,7 +509,7 @@ void mmu_init(){
   uart0_hex(ttbr1);
   uart0_puts("\nram_end      =");
   uart0_hex(ram_end);
-  
+
   uart0_puts("mmu_init el1 start\n");
   init_el1();
   uart0_puts("mmu_init el3 start\n");
