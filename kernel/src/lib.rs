@@ -39,6 +39,7 @@ fn func() {
 
 #[no_mangle]
 pub fn entry() -> ! {
+    /*
     let ctx = driver::init();
     driver::uart::puts("call c function\n");
     let device_start;
@@ -50,18 +51,18 @@ pub fn entry() -> ! {
     driver::uart::puts(" , ");
     driver::uart::hex(device_end);
     driver::uart::puts("\n");
-
+*/
 //    aarch64::mmu::init();
     unsafe{mmu_init();};
-    boot::run();
-
+//    boot::run();
+/*
     match aarch64::el::get_current_el() {
         3 => { el3::el3_to_el1(); }
         _ => {
             driver::uart::puts("Error: execution level is not EL3\n");
         }
     }
-
+*/
     loop {}
 }
 

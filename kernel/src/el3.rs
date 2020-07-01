@@ -8,12 +8,12 @@ extern "C" {
 }
 
 pub fn el3_to_el1() {
-    driver::uart::puts("el3_to_el1\n");
+//    driver::uart::puts("el3_to_el1\n");
     unsafe{el3_to_el1_asm();}
 }
 
 pub fn el3_to_el1_org() {
-    driver::uart::puts("el3_to_el1\n");
+//    driver::uart::puts("el3_to_el1\n");
 
     let end = unsafe { &mut __stack_el1_end as *mut u64 as usize };
     let start = unsafe { &mut __stack_el1_start as *mut u64 as usize };
@@ -51,5 +51,5 @@ pub fn el3_to_el1_org() {
             : "x0"
         );
     }
-    driver::uart::puts("el3_to_el1 done\n");
+//    driver::uart::puts("el3_to_el1 done\n");
 }
