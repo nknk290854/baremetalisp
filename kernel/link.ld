@@ -1,12 +1,6 @@
 SECTIONS
 {
 /*    . = 0x80000;*/
-
-    .device : {
-    	    __device_start = 0x01C00000;
-	    __device_end   = 0x01F10000;
-    }
-
     . = 0x40080000;
     __ram_start = .;
     .init : { KEEP(*(.init)) }
